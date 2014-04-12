@@ -23,7 +23,12 @@
     <section id="todoapp">
         <header id="header">
             <h1>Todos</h1>
-            <input id="new-todo" placeholder="What needs to be done?">
+            <input id="new-todo" placeholder="What needs to be done?" autofocus>
+            <div>
+                <a href="#/">Show All</a>
+                <a href="#/pending">Show Pending</a>
+                <a href="#/completed">Show Completed</a>
+            </div>
         </header>
         <section id="main">
             <ul id="todo-list"></ul>
@@ -64,7 +69,15 @@
       //Collections
       app.ToDoList = Backbone.Collection.extend({
         model : app.Todo,
-        localStorage : new Store("backbone-todo")
+        localStorage : new Store("backbone-todo"),
+        completed : function() {
+            return this.filter(function(todo) {
+                return todo.get('completed');
+            });
+        },
+        remaining : function() {
+            return this.without.apply(this, this.completed());
+        }
       });
       //Initialize Collection
       app.todoList = new app.ToDoList();
@@ -134,18 +147,39 @@
             var view = new app.TodoView({model : todo});
             $('#todo-list').append(view.render().el);
           },
-          addAll : function() {
-            this.$('#todo-list').html('');
-              app.todoList.each(this.addOne,this);
-          },
-          newAttributes : function() {
-            return {
-                title : this.input.val().trim(),
-                completed:false
+        addAll : function() {
+                this.$('#todo-list').html('');
+            switch(window.filter) {
+                case 'pending':
+                    _.each(app.todoList.remaining(), this.addOne);
+                    break;
+                case 'completed':
+                    _.each(app.todoList.completed(), this.addOne);
+                    break;
+                default:
+                    app.todoList.each(this.addOne, this);
+                    break;
             }
-          }
-      });
-      
+        },
+            newAttributes : function() {
+                return {
+                    title : this.input.val().trim(),
+                    completed:false
+                }
+            }
+        });
+      app.Router = Backbone.Router.extend({
+      routes: {
+        '*filter' : 'setFilter'
+      },
+      setFilter: function(params) {
+        console.log('app.router.params = ' + params); // just for didactical purposes.
+        window.filter = params.trim() || '';
+        app.todoList.trigger('reset');
+      }
+    });
+      app.router = new app.Router();
+      Backbone.history.start();   
       app.appView = new app.AppView();
 </script>
   
