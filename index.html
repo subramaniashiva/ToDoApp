@@ -10,14 +10,20 @@
   <!-- Your HTML -->
   <!-- ========= -->
     <section id="todoapp">
-    <header id="header">
-      <h1>Todos</h1>
-      <input id="new-todo" placeholder="What needs to be done?">
-    </header>
-    <section id="main">
-      <ul id="todo-list"></ul>
+        <header id="header">
+            <h1>Todos</h1>
+            <input id="new-todo" placeholder="What needs to be done?">
+        </header>
+        <section id="main">
+            <ul id="todo-list"></ul>
+        </section>
     </section>
-  </section>
+    <script type="text/template" id="item-template">
+        <div class="view">
+            <input class="toggle" type="checkbox">
+            <label><%- title %></label>
+        </div>
+    </script>
   <!-- ========= -->
   <!-- Libraries -->
   <!-- ========= -->
@@ -30,23 +36,67 @@
   <!-- Javascript code -->
   <!-- =============== -->
   <script type="text/javascript">
-      // your JS code goes here
-      var AppView = Backbone.View.extend({
-          // el - stands for element. Every view has a element associate in with HTML
-          //      content will be rendered.
-          el: '#container',
-          template:_.template("<h3>Hello <%= who %></h3>"),
-          // It's the first function called when this view it's instantiated.
-          initialize: function(){
-              this.render();
+      var app = {};
+      //Model
+      app.Todo = Backbone.Model.extend({
+        defaults : {
+            title : '',
+            completed : false
+        }
+      });
+      //Collections
+      app.ToDoList = Backbone.Collection.extend({
+        model : app.Todo,
+        localStorage : new Store("backbone-todo")
+      });
+      //Initialize Collection
+      app.todoList = new app.ToDoList();
+      //Views
+      app.TodoView = Backbone.View.extend({
+          tagName : 'li',
+          template : _.template($('#item-template').html()),
+          render : function() {
+            this.$el.html(this.template(this.model.toJSON()));
+            return this;
+            }
+          
+      });
+      app.AppView = Backbone.View.extend({
+          el : '#todoapp',
+          initialize : function () {
+            this.input = this.$('#new-todo');
+            app.todoList.on('add',this.addOne, this);
+            app.todoList.on('reset',this.addAll,this);
+            app.todoList.fetch();
           },
-          // $el - it's a cached jQuery object (el), in which you can use jQuery functions
-          //       to push content. Like the Hello World in this case.
-          render: function(){
-              this.$el.html(this.template({who:"world !"}));
+          events : {
+            'keypress #new-todo' : 'createToDoOnEnter'
+          },
+          createToDoOnEnter : function(e) {
+            if(e.which !== 13 || !this.input.val().trim()) {
+                return;
+            }
+            app.todoList.create(this.newAttributes());
+            this.input.val('');
+            
+          },
+          addOne : function(todo) {
+            var view = new app.TodoView({model : todo});
+            $('#todo-list').append(view.render().el);
+          },
+          addAll : function() {
+            this.$('#todo-list').html('');
+              app.todoList.each(this.addOne,this);
+          },
+          newAttributes : function() {
+            return {
+                title : this.input.val().trim(),
+                completed:false
+            }
           }
       });
-      var appView = new AppView();
+      
+      app.appView = new app.AppView();
 </script>
   
 </body>
