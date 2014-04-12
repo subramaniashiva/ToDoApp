@@ -1,9 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <title>Hello World in Backbone.js</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Hello World in Backbone.js</title>
+    <style>
+        #todo-list input.edit{
+            display : none;
+        }
+        #todo-list .editing label {
+            display : none;
+        }
+        #todo-list .editing input.edit {
+            display : inline;
+        }
+    </style>
 </head>
 <body>
   <!-- ========= -->
@@ -20,8 +31,11 @@
     </section>
     <script type="text/template" id="item-template">
         <div class="view">
-            <input class="toggle" type="checkbox">
+            <input class="toggle" type="checkbox" <%= completed ? 'checked' : '' %>>
             <label><%- title %></label>
+            <input class="edit" value="<%- title %>">
+            <button class="destroy">remove</button>
+            
         </div>
     </script>
   <!-- ========= -->
@@ -42,6 +56,9 @@
         defaults : {
             title : '',
             completed : false
+        },
+        toggle: function(){
+            this.save({ completed: !this.get('completed')});
         }
       });
       //Collections
@@ -57,9 +74,42 @@
           template : _.template($('#item-template').html()),
           render : function() {
             this.$el.html(this.template(this.model.toJSON()));
+            this.input = this.$('.edit');
             return this;
+            },
+          initialize : function() {
+            this.model.on('change',this.render,this);
+              this.model.on('destroy',this.remove,this);
+            },
+          events : {
+            'dblclick label' : 'edit',
+            'keypress .edit' : 'updateOnEnter',
+            'blur .edit' : 'close',
+            'click .toggle' : 'toggleCompleted',
+            'click .destroy': 'destroy'
+          },
+          edit : function() {
+            this.$el.addClass('editing');
+            this.input.focus();
+          },
+          close : function() {
+            var value = this.input.val().trim();
+            if(value) {
+                this.model.save({title : value });
             }
-          
+            this.$el.removeClass('editing');
+        },
+        updateOnEnter : function(e) {
+            if(e.which  == 13) {
+                this.close();
+            }
+        },
+        toggleCompleted : function() {
+            this.model.toggle();
+        },
+        destroy : function() {
+            this.model.destroy();
+        }
       });
       app.AppView = Backbone.View.extend({
           el : '#todoapp',
